@@ -1,0 +1,10 @@
+[build]
+  command = "npm run build"
+  # Publish directory는 Netlify Next.js Plugin이 자동으로 관리합니다
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+[build.environment]
+  NODE_VERSION = "18"
+
