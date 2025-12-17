@@ -552,7 +552,7 @@ export const recentDeals: Deal[] = [
   },
   {
     id: 'maxims-shake-shack-vn',
-    type: 'Franchise',
+    type: 'MF',
     brandId: 'shake-shack-hk',
     brandName: 'Shake Shack',
     partnerId: 'maxims-caterers',
