@@ -79,14 +79,14 @@ export interface NewsItem {
 
 export interface Deal {
   id: string
-  type: 'MF' | 'JV' | 'M&A' | 'expansion'
+  type: 'MF' | 'JV' | 'M&A' | 'expansion' | 'New Entry' | 'New Brand' | 'Franchise'
   brandId: string
   brandName: string
   partnerId: string
   partnerName: string
   country: Country
   announcedDate: string
-  status: 'announced' | 'in-progress' | 'completed' | 'cancelled'
+  status: 'announced' | 'in-progress' | 'completed' | 'cancelled' | 'planned'
   value?: number // in USD
   description: string
   source: string
