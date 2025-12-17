@@ -1,10 +1,13 @@
 [build]
   command = "npm run build"
-  # Publish directory는 명시하지 않습니다 - Next.js 플러그인이 자동으로 관리합니다
+  # Publish directory는 Next.js 플러그인이 자동으로 관리하므로 명시하지 않습니다
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
 [build.environment]
   NODE_VERSION = "18"
+
+# Next.js 플러그인을 사용할 때는 publish directory를 설정하지 않습니다
+# 플러그인이 자동으로 .next 폴더를 처리합니다
 
