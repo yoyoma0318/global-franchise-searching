@@ -39,8 +39,16 @@ export default function MapView({
     const initMap = async () => {
       if (!mapRef.current) return
 
+      const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''
+      
+      if (!apiKey) {
+        console.error('Google Maps API key is not set. Please configure NEXT_PUBLIC_GOOGLE_MAPS_API_KEY environment variable in Netlify.')
+        setIsLoading(false)
+        return
+      }
+
       const loader = new Loader({
-        apiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
+        apiKey: apiKey,
         version: 'weekly',
         libraries: ['places'],
       })

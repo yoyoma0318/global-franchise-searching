@@ -1,188 +1,302 @@
 'use client'
 
-import { Country } from '@/types'
-import { getBrandsByCategory, companies } from '@/lib/data'
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
-import { Coffee, UtensilsCrossed, Cake } from 'lucide-react'
+import { useMemo } from 'react'
+import { Company, Country, Category } from '@/types'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts'
+import { Coffee, UtensilsCrossed, Cake, Pizza, Store, TrendingUp } from 'lucide-react'
 
 interface CategoryChartProps {
-  country?: Country
+  companies: Company[]
+  selectedCountry?: Country
+  loading?: boolean
 }
 
-export default function CategoryChart({ country }: CategoryChartProps) {
-  const categories = ['coffee', 'bakery', 'chicken', 'pizza', 'qsr']
-  const categoryLabels: Record<string, string> = {
+export default function CategoryChart({ companies, selectedCountry, loading }: CategoryChartProps) {
+  // 카테고리 설정
+  const categoryLabels: Record<Category, string> = {
     coffee: '커피',
     bakery: '베이커리',
     chicken: '치킨',
     pizza: '피자',
     qsr: 'QSR',
+    'casual-dining': '캐주얼 다이닝',
+    'premium-dining': '프리미엄 다이닝',
+    beverages: '음료',
+    dessert: '디저트',
   }
 
   const categoryIcons: Record<string, React.ReactNode> = {
     coffee: <Coffee className="w-4 h-4" />,
     bakery: <Cake className="w-4 h-4" />,
     chicken: <UtensilsCrossed className="w-4 h-4" />,
-    pizza: <UtensilsCrossed className="w-4 h-4" />,
+    pizza: <Pizza className="w-4 h-4" />,
     qsr: <UtensilsCrossed className="w-4 h-4" />,
   }
 
-  const data = categories.map(category => {
-    const brands = getBrandsByCategory(category, country)
-    return {
-      category: categoryLabels[category] || category,
-      count: brands.length,
-      icon: categoryIcons[category],
-    }
-  })
+  const countryLabels: Record<Country, string> = {
+    indonesia: '인도네시아',
+    malaysia: '말레이시아',
+    'hong-kong': '홍콩',
+    philippines: '필리핀',
+    vietnam: '베트남',
+    thailand: '태국',
+    singapore: '싱가포르',
+    taiwan: '대만',
+  }
 
-  const colors = ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981']
+  // 지역명 생성
+  const regionName = selectedCountry ? countryLabels[selectedCountry] : 'Global'
 
-  // 총 매장 수 계산
-  const totalStores = data.reduce((sum, item) => {
-    const brands = getBrandsByCategory(item.category.toLowerCase().replace('커피', 'coffee').replace('베이커리', 'bakery').replace('치킨', 'chicken').replace('피자', 'pizza'), country)
-    const storeCount = brands.reduce((acc, brand) => acc + (brand.storeCount || 0), 0)
-    return sum + storeCount
-  }, 0)
+  // 선택된 지역의 회사들 필터링 (useMemo로 최적화)
+  const filteredCompanies = useMemo(() => {
+    if (!selectedCountry) return companies
+    return companies.filter(c => c.country === selectedCountry)
+  }, [companies, selectedCountry])
+
+  // 카테고리별 데이터 계산 (useMemo로 최적화)
+  const categoryData = useMemo(() => {
+    const categoryMap = new Map<Category, { count: number; storeCount: number }>()
+
+    filteredCompanies.forEach(company => {
+      company.brands.forEach(brand => {
+        const existing = categoryMap.get(brand.category) || { count: 0, storeCount: 0 }
+        categoryMap.set(brand.category, {
+          count: existing.count + 1,
+          storeCount: existing.storeCount + (brand.storeCount || 0),
+        })
+      })
+    })
+
+    return Array.from(categoryMap.entries())
+      .map(([category, data]) => ({
+        category,
+        categoryLabel: categoryLabels[category] || category,
+        brandCount: data.count,
+        storeCount: data.storeCount,
+        icon: categoryIcons[category],
+      }))
+      .sort((a, b) => b.brandCount - a.brandCount)
+  }, [filteredCompanies])
+
+  // Top 5 회사 (매장 수 기준)
+  const top5Companies = useMemo(() => {
+    return filteredCompanies
+      .map(company => {
+        const totalStores = company.brands.reduce((sum, brand) => sum + (brand.storeCount || 0), 0)
+        return {
+          name: company.name,
+          storeCount: totalStores,
+          brandCount: company.brands.length,
+        }
+      })
+      .filter(c => c.storeCount > 0)
+      .sort((a, b) => b.storeCount - a.storeCount)
+      .slice(0, 5)
+  }, [filteredCompanies])
+
+  const chartColors = ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#06b6d4', '#f43f5e']
+
+  // 로딩 상태
+  if (loading) {
+    return (
+      <div className="h-full flex items-center justify-center p-8">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
+          <p className="text-sm text-gray-400">Loading analytics...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // 데이터 부족 예외 처리
+  if (filteredCompanies.length === 0 || categoryData.length === 0) {
+    return (
+      <div className="h-full flex items-center justify-center p-8">
+        <div className="text-center max-w-xs">
+          <div className="w-16 h-16 rounded-full bg-gray-800/50 flex items-center justify-center mx-auto mb-4">
+            <TrendingUp className="w-8 h-8 text-gray-600" />
+          </div>
+          <h3 className="text-lg font-semibold text-gray-300 mb-2">
+            Not enough data for analytics
+          </h3>
+          <p className="text-sm text-gray-500">
+            {selectedCountry
+              ? `No company data available for ${regionName}`
+              : 'No company data available'}
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  // 데이터가 1개뿐인 경우
+  if (categoryData.length === 1 && top5Companies.length <= 1) {
+    return (
+      <div className="h-full flex items-center justify-center p-8">
+        <div className="text-center max-w-xs">
+          <div className="w-16 h-16 rounded-full bg-gray-800/50 flex items-center justify-center mx-auto mb-4">
+            <Store className="w-8 h-8 text-gray-600" />
+          </div>
+          <h3 className="text-lg font-semibold text-gray-300 mb-2">
+            Limited data available
+          </h3>
+          <p className="text-sm text-gray-500">
+            Need more data points for meaningful analytics
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className="h-full flex flex-col p-4">
+    <div className="h-full flex flex-col p-4 overflow-y-auto">
+      {/* 헤더 - 동적 지역명 포함 */}
       <div className="mb-4">
-        <h3 className="text-base font-bold mb-1">카테고리별 통계</h3>
-        <p className="text-xs text-gray-400 mb-2">
-          {country ? (
-            <>
-              {country === 'indonesia' && '인도네시아'}
-              {country === 'malaysia' && '말레이시아'}
-              {country === 'hong-kong' && '홍콩'}
-              {country === 'philippines' && '필리핀'}
-              {country === 'vietnam' && '베트남'}
-              {country === 'thailand' && '태국'}
-              {country === 'singapore' && '싱가포르'}
-              {country === 'taiwan' && '대만'}
-              {!['indonesia', 'malaysia', 'hong-kong', 'philippines', 'vietnam', 'thailand', 'singapore', 'taiwan'].includes(country) && country}
-              {' '}지역 기준
-            </>
-          ) : (
-            '전체 지역 기준'
-          )}
+        <h3 className="text-base font-bold mb-1">
+          {regionName} Category Distribution
+        </h3>
+        <p className="text-xs text-gray-400">
+          {filteredCompanies.length} companies • {categoryData.length} categories
         </p>
-        <div className="flex items-center gap-4 text-xs text-gray-500">
-          <div className="flex items-center gap-1.5">
-            <div className="w-2 h-2 rounded-full bg-blue-400"></div>
-            <span>브랜드 수</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-2 h-2 rounded-full bg-green-400"></div>
-            <span>총 매장 수</span>
-          </div>
+      </div>
+
+      {/* 카테고리별 브랜드 수 차트 */}
+      <div className="mb-6">
+        <h4 className="text-sm font-semibold text-gray-300 mb-3">
+          Category Share (Brand Count)
+        </h4>
+        <div className="h-[180px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={categoryData}
+                dataKey="brandCount"
+                nameKey="categoryLabel"
+                cx="50%"
+                cy="50%"
+                outerRadius={60}
+                label={({ categoryLabel, brandCount }) =>
+                  `${categoryLabel}: ${brandCount}`
+                }
+                labelLine={false}
+              >
+                {categoryData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={chartColors[index % chartColors.length]} />
+                ))}
+              </Pie>
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: '#1a1a1a',
+                  border: '1px solid #404040',
+                  borderRadius: '8px',
+                  fontSize: '12px',
+                }}
+                formatter={(value: number, name: string) => [
+                  `${value} brands`,
+                  name,
+                ]}
+              />
+            </PieChart>
+          </ResponsiveContainer>
         </div>
       </div>
 
-      <div className="flex-1 min-h-[150px] mb-3 max-h-[200px]">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart 
-            data={data} 
-            layout="vertical" 
-            margin={{ top: 5, right: 5, left: 0, bottom: 5 }}
-            barCategoryGap="20%"
-          >
-            <XAxis 
-              type="number" 
-              tick={{ fill: '#9ca3af', fontSize: 10 }}
-              hide
-            />
-            <YAxis
-              dataKey="category"
-              type="category"
-              width={60}
-              tick={{ fill: '#9ca3af', fontSize: 10 }}
-              axisLine={false}
-              tickLine={false}
-            />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: '#1a1a1a',
-                border: '1px solid #404040',
-                borderRadius: '8px',
-                color: '#ededed',
-                fontSize: '11px',
-                padding: '8px',
-              }}
-              labelFormatter={(label) => `카테고리: ${label}`}
-              formatter={(value: number) => [`${value}개 브랜드`, '브랜드 수']}
-            />
-            <Bar 
-              dataKey="count" 
-              radius={[0, 4, 4, 0]} 
-              maxBarSize={40}
-            >
-              {data.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
-              ))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
+      {/* Top 5 회사 (매장 수) */}
+      <div className="mb-4">
+        <h4 className="text-sm font-semibold text-gray-300 mb-3">
+          {regionName} Top 5 Companies (Store Count)
+        </h4>
+        {top5Companies.length > 0 ? (
+          <div className="h-[200px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={top5Companies}
+                layout="vertical"
+                margin={{ top: 5, right: 20, left: 5, bottom: 5 }}
+              >
+                <XAxis
+                  type="number"
+                  tick={{ fill: '#9ca3af', fontSize: 11 }}
+                  axisLine={{ stroke: '#404040' }}
+                  label={{ value: 'Store Count', position: 'bottom', fill: '#6b7280', fontSize: 10 }}
+                />
+                <YAxis
+                  dataKey="name"
+                  type="category"
+                  width={100}
+                  tick={{ fill: '#d1d5db', fontSize: 11 }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: '#1a1a1a',
+                    border: '1px solid #404040',
+                    borderRadius: '8px',
+                    fontSize: '12px',
+                    padding: '10px',
+                  }}
+                  cursor={{ fill: 'rgba(59, 130, 246, 0.1)' }}
+                  formatter={(value: number, name: string, props: any) => {
+                    if (name === 'storeCount') {
+                      return [
+                        `${value.toLocaleString()} stores`,
+                        `${props.payload.brandCount} brands`,
+                      ]
+                    }
+                    return [value, name]
+                  }}
+                  labelFormatter={(label) => `Company: ${label}`}
+                />
+                <Bar dataKey="storeCount" radius={[0, 4, 4, 0]} maxBarSize={30}>
+                  {top5Companies.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={chartColors[index % chartColors.length]} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        ) : (
+          <div className="text-center py-8 text-gray-500 text-sm">
+            No store count data available
+          </div>
+        )}
       </div>
 
+      {/* 카테고리 상세 정보 */}
       <div className="space-y-2">
-        {data.map((item, index) => {
-          // 카테고리 이름을 영어로 변환
-          const categoryMap: Record<string, string> = {
-            '커피': 'coffee',
-            '베이커리': 'bakery',
-            '치킨': 'chicken',
-            '피자': 'pizza',
-            'QSR': 'qsr',
-          }
-          const categoryEn = categoryMap[item.category] || item.category.toLowerCase()
-          const brands = getBrandsByCategory(categoryEn, country)
-          const storeCount = brands.reduce((acc, brand) => acc + (brand.storeCount || 0), 0)
-          return (
-            <div
-              key={item.category}
-              className="bg-[#242424] rounded-lg p-3 border border-gray-700/50 hover:border-gray-600 transition-colors"
-            >
-              {/* 카테고리 헤더 */}
-              <div className="flex items-center gap-2 mb-3">
-                <div className="text-blue-400">{item.icon}</div>
-                <span className="text-sm font-semibold text-gray-200">{item.category}</span>
+        <h4 className="text-sm font-semibold text-gray-300 mb-2">Category Details</h4>
+        {categoryData.slice(0, 5).map((item, index) => (
+          <div
+            key={item.category}
+            className="bg-[#242424] rounded-lg p-3 border border-gray-700/50 hover:border-gray-600 transition-colors"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div
+                  className="w-3 h-3 rounded-full"
+                  style={{ backgroundColor: chartColors[index % chartColors.length] }}
+                />
+                <span className="text-sm font-medium text-gray-200">{item.categoryLabel}</span>
               </div>
-              
-              {/* 통계 정보 - 명확한 레이블과 함께 */}
-              <div className="grid grid-cols-2 gap-3">
-                {/* 브랜드 수 */}
-                <div className="bg-[#1a1a1a] rounded p-2">
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-lg font-bold text-blue-400">{item.count}</span>
-                    <span className="text-xs text-gray-400">개</span>
-                  </div>
-                  <p className="text-[10px] text-gray-500 mt-0.5">브랜드</p>
+              <div className="flex items-center gap-4 text-xs">
+                <div className="text-right">
+                  <div className="font-semibold text-blue-400">{item.brandCount}</div>
+                  <div className="text-gray-500">brands</div>
                 </div>
-                
-                {/* 총 매장 수 */}
-                {storeCount > 0 ? (
-                  <div className="bg-[#1a1a1a] rounded p-2">
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-lg font-bold text-green-400">{storeCount.toLocaleString()}</span>
-                      <span className="text-xs text-gray-400">개</span>
+                {item.storeCount > 0 && (
+                  <div className="text-right">
+                    <div className="font-semibold text-green-400">
+                      {item.storeCount.toLocaleString()}
                     </div>
-                    <p className="text-[10px] text-gray-500 mt-0.5">총 매장</p>
-                  </div>
-                ) : (
-                  <div className="bg-[#1a1a1a] rounded p-2 opacity-50">
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-lg font-bold text-gray-500">-</span>
-                    </div>
-                    <p className="text-[10px] text-gray-500 mt-0.5">매장 정보 없음</p>
+                    <div className="text-gray-500">stores</div>
                   </div>
                 )}
               </div>
             </div>
-          )
-        })}
+          </div>
+        ))}
       </div>
     </div>
   )
 }
-
