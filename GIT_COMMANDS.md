@@ -131,3 +131,4 @@ git remote -v
 1. GitHub 웹사이트에서 파일이 업로드되었는지 확인
 2. Netlify에서 Git 연동 시작
 
+
