@@ -1,14 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import Header from './Header'
-import Sidebar from './Sidebar'
 import MapView from './MapView'
 import CompanyProfile from './CompanyProfile'
 import BrandPortfolio from './BrandPortfolio'
 import NewsFeed from './NewsFeed'
 import CategoryChart from './CategoryChart'
 import FilterPanel from './FilterPanel'
+import DraggablePanel from './DraggablePanel'
 import { Company, MapViewState, FilterState } from '@/types'
 import { useCompanies } from '@/hooks'
 
@@ -49,88 +49,114 @@ export default function DashboardFirebase() {
     }
   }
 
-  return (
-    <div className="min-h-screen bg-[#0a0a0a] text-[#ededed] p-6">
-      <div className="max-w-[1920px] mx-auto">
-        {/* Header Component */}
-        <Header />
+  // Calculate filtered count for header
+  const filteredCount = useMemo(() => {
+    return companies.length
+  }, [companies])
 
-        {/* Show loading or error states */}
-        {loading && (
-          <div className="text-center py-8">
+  const totalCount = useMemo(() => {
+    // This would ideally come from a total companies query
+    // For now, using the same as filtered
+    return companies.length
+  }, [companies])
+
+  return (
+    <div className="relative min-h-screen bg-[#0a0a0a] text-[#ededed] overflow-hidden">
+      {/* Header with Map Info - z-20 */}
+      <Header
+        mapState={mapState}
+        filteredCount={filteredCount}
+        totalCount={totalCount}
+      />
+
+      {/* Show loading or error states */}
+      {loading && (
+        <div className="absolute inset-0 flex items-center justify-center z-50 bg-[#0a0a0a]">
+          <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
             <p className="text-gray-400 mt-4">Loading companies...</p>
           </div>
-        )}
+        </div>
+      )}
 
-        {error && (
-          <div className="bg-red-500/10 border border-red-500 rounded-lg p-4 mb-6">
-            <p className="text-red-400">Error loading data: {error.message}</p>
-            <p className="text-sm text-gray-400 mt-2">
-              Make sure Firebase is configured in your .env.local file
-            </p>
+      {error && (
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-50 bg-red-500/10 border border-red-500 rounded-lg p-4 max-w-md">
+          <p className="text-red-400">Error loading data: {error.message}</p>
+          <p className="text-sm text-gray-400 mt-2">
+            Make sure Firebase is configured in your .env.local file
+          </p>
+        </div>
+      )}
+
+      {/* Full-Screen Map - z-0 */}
+      {!loading && (
+        <>
+          <div className="absolute inset-0 z-0">
+            <MapView
+              mapState={mapState}
+              onMapStateChange={setMapState}
+              onCompanyClick={handleMapClick}
+              filters={filters}
+              selectedBrandId={selectedBrandId}
+            />
           </div>
-        )}
 
-        {/* Main Layout */}
-        {!loading && (
-          <>
-            <div className="grid grid-cols-12 gap-4 h-[calc(100vh-180px)] relative z-0">
-              {/* Left Sidebar - Filter Panel */}
-              <Sidebar className="col-span-2 relative z-10">
-                <FilterPanel filters={filters} onFiltersChange={setFilters} />
-              </Sidebar>
+          {/* Floating Panel: Filter (Top-Left) */}
+          <DraggablePanel
+            title="필터"
+            initialPosition={{ top: 90, left: 16 }}
+            width="384px"
+            className="max-h-[calc(100vh-120px)]"
+          >
+            <FilterPanel filters={filters} onFiltersChange={setFilters} />
+          </DraggablePanel>
 
-              {/* Center - Map View */}
-              <div className="col-span-7 bg-[#1a1a1a] rounded-lg border border-gray-800 overflow-hidden relative z-0">
-                <MapView
-                  mapState={mapState}
-                  onMapStateChange={setMapState}
-                  onCompanyClick={handleMapClick}
-                  filters={filters}
-                  selectedBrandId={selectedBrandId}
-                />
-              </div>
+          {/* Floating Panel: Category Chart (Top-Right) */}
+          <DraggablePanel
+            title="카테고리 분석"
+            initialPosition={{ top: 90, right: 16 }}
+            width="360px"
+            className="max-h-96"
+          >
+            <CategoryChart
+              companies={companies}
+              selectedCountry={mapState.selectedCountry}
+              loading={loading}
+            />
+          </DraggablePanel>
 
-              {/* Right Sidebar - Info Panels */}
-              <div className="col-span-3 flex flex-col gap-4">
-                {/* Company Profile */}
-                <div className="flex-1 bg-[#1a1a1a] rounded-lg border border-gray-800 overflow-hidden min-h-[350px]">
-                  <CompanyProfile company={selectedCompany} />
-                </div>
-
-                {/* Brand Portfolio */}
-                <div className="flex-1 bg-[#1a1a1a] rounded-lg border border-gray-800 overflow-hidden min-h-[250px]">
-                  <BrandPortfolio
-                    company={selectedCompany}
-                    selectedBrandId={selectedBrandId}
-                    onBrandClick={(brandId) => {
-                      setSelectedBrandId(selectedBrandId === brandId ? null : brandId)
-                    }}
-                  />
-                </div>
-              </div>
+          {/* Floating Panel: Company Info (Right-Bottom) */}
+          <DraggablePanel
+            title="기업 정보"
+            initialPosition={{ bottom: 16, right: 16 }}
+            width="384px"
+            className="max-h-[600px]"
+          >
+            <div className="overflow-y-auto max-h-[300px]">
+              <CompanyProfile company={selectedCompany} />
             </div>
-
-            {/* Bottom Row - News and Chart */}
-            <div className="grid grid-cols-12 gap-4 mt-4 relative z-20">
-              {/* News Feed */}
-              <div className="col-span-7 bg-gradient-to-br from-[#1a1a1a] to-[#1f1f2e] rounded-lg border-2 border-blue-500/30 overflow-hidden shadow-lg shadow-blue-500/10 relative z-20">
-                <NewsFeed />
-              </div>
-
-              {/* Category Chart */}
-              <div className="col-span-5 bg-[#1a1a1a] rounded-lg border border-gray-800 overflow-hidden relative z-20">
-                <CategoryChart
-                  companies={companies}
-                  selectedCountry={mapState.selectedCountry}
-                  loading={loading}
-                />
-              </div>
+            <div className="border-t border-gray-700/50 mt-2 pt-2">
+              <BrandPortfolio
+                company={selectedCompany}
+                selectedBrandId={selectedBrandId}
+                onBrandClick={(brandId) => {
+                  setSelectedBrandId(selectedBrandId === brandId ? null : brandId)
+                }}
+              />
             </div>
-          </>
-        )}
-      </div>
+          </DraggablePanel>
+
+          {/* Floating Panel: News Feed (Bottom-Left) */}
+          <DraggablePanel
+            title="최신 소식"
+            initialPosition={{ bottom: 16, left: 16 }}
+            width="400px"
+            className="h-72"
+          >
+            <NewsFeed />
+          </DraggablePanel>
+        </>
+      )}
     </div>
   )
 }

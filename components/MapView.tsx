@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Loader } from '@googlemaps/js-api-loader'
 import { MapViewState, FilterState, Company } from '@/types'
 import { companies } from '@/lib/data'
-import { MapPin, Building2 } from 'lucide-react'
+import { Building2 } from 'lucide-react'
 
 interface MapViewProps {
   mapState: MapViewState
@@ -335,34 +335,6 @@ export default function MapView({
         </div>
       )}
       <div ref={mapRef} className="w-full h-full" style={{ position: 'relative', zIndex: 0 }} />
-      <div className="absolute top-4 left-4 bg-[#1a1a1a] bg-opacity-90 rounded-lg p-3 border border-gray-800">
-        <div className="flex items-center gap-2 text-sm">
-          <MapPin className="w-4 h-4 text-blue-500" />
-          <span className="text-gray-300">
-            View: <span className="text-white font-semibold">{mapState.viewLevel}</span>
-          </span>
-        </div>
-        <div className="mt-2 text-xs text-gray-400">
-          Zoom: {mapState.zoom.toFixed(1)} | 표시: {(() => {
-            let filtered = companies
-            if (filters.countries && filters.countries.length > 0) {
-              filtered = filtered.filter(c => filters.countries!.includes(c.country))
-            }
-            if (filters.categories && filters.categories.length > 0) {
-              filtered = filtered.filter(c =>
-                c.brands.some(brand => filters.categories!.includes(brand.category))
-              )
-            }
-            if (filters.minRevenue) {
-              filtered = filtered.filter(c => c.revenue && c.revenue >= filters.minRevenue!)
-            }
-            if (filters.isPublic !== undefined) {
-              filtered = filtered.filter(c => c.isPublic === filters.isPublic)
-            }
-            return filtered.length
-          })()}/{companies.length}
-        </div>
-      </div>
     </div>
   )
 }
