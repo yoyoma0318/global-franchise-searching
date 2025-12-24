@@ -1,65 +1,37 @@
 {
   "name": "global-franchise-searching",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "seed": "node scripts/seed-data.js"
   },
   "dependencies": {
-    "@googlemaps/js-api-loader": "^1.16.2",
-    "@react-google-maps/api": "^2.19.3",
-    "clsx": "^2.0.0",
-    "dotenv": "^17.2.3",
-    "firebase": "^12.7.0",
-    "lucide-react": "^0.294.0",
-    "next": "^14.0.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "recharts": "^2.10.3",
-    "tailwind-merge": "^2.0.0"
+    "firebase": "^10.12.0",
+    "firebase-admin": "^12.1.0",
+    "next": "14.2.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "chart.js": "^4.4.0",
+    "react-chartjs-2": "^5.2.0",
+    "@react-google-maps/api": "^2.19.0",
+    "lucide-react": "^0.378.0",
+    "dotenv": "^16.4.5"
   },
   "devDependencies": {
-    "@netlify/plugin-nextjs": "^4.39.0",
-    "@types/node": "^20.10.0",
-    "@types/react": "^18.2.42",
-    "@types/react-dom": "^18.2.17",
-    "autoprefixer": "^10.4.16",
-    "eslint": "^8.55.0",
-    "eslint-config-next": "^14.0.0",
-    "postcss": "^8.4.32",
-    "tailwindcss": "^3.3.6",
-    "typescript": "^5.3.3"
+    "typescript": "^5.0.0",
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.0.0",
+    "@types/react-dom": "^18.0.0",
+    "postcss": "^8.0.0",
+    "tailwindcss": "^3.0.0",
+    "eslint": "^8.0.0",
+    "eslint-config-next": "14.2.3"
   },
   "engines": {
-    "node": "18.x"
-  },{
-    "name": "global-franchise-searching",
-    "version": "0.1.0",
-    // ... 기존 내용들 ...
-    "scripts": {
-      // ...
-    },
-    "dependencies": {
-      // ...
-    },
-    // ▼▼▼ 이 부분을 추가하세요 ▼▼▼
-    "engines": {
-      "node": "22.x"
-    }
+    "node": "22.x"
   }
-  ```
-  *(참고: 에러 메시지는 24.x를 언급했지만, 안정적인 **22.x (LTS 버전)**을 쓰는 것이 호환성 면에서 더 안전합니다. 위 코드를 그대로 복사해 넣으세요.)*
-  
-  ### 2. GitHub에 변경 사항 올리기 (Push)
-  
-  파일을 수정하고 저장했으면, GitHub에 올려야 Vercel이 다시 배포를 시작합니다.
-  **Cursor 터미널**에 다음 명령어를 순서대로 입력하세요.
-  
-  ```bash
-  git add package.json
-  git commit -m "Update Node.js version to 22.x for Vercel deployment"
-  git push origin main
 }
