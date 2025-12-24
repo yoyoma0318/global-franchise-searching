@@ -128,14 +128,14 @@ export default function DashboardFirebase() {
           {/* Floating Panel: Company Info (Right-Bottom) */}
           <DraggablePanel
             title="기업 정보"
-            initialPosition={{ bottom: 16, right: 16 }}
+            initialPosition={{ bottom: 70, right: 16 }}
             width="384px"
-            className="max-h-[600px]"
+            className="max-h-[calc(100vh-180px)]"
           >
             <div className="overflow-y-auto max-h-[300px]">
               <CompanyProfile company={selectedCompany} />
             </div>
-            <div className="border-t border-gray-700/50 mt-2 pt-2">
+            <div className="border-t border-white/10 mt-2 pt-2">
               <BrandPortfolio
                 company={selectedCompany}
                 selectedBrandId={selectedBrandId}
@@ -146,15 +146,8 @@ export default function DashboardFirebase() {
             </div>
           </DraggablePanel>
 
-          {/* Floating Panel: News Feed (Bottom-Left) */}
-          <DraggablePanel
-            title="최신 소식"
-            initialPosition={{ bottom: 16, left: 16 }}
-            width="400px"
-            className="h-72"
-          >
-            <NewsFeed />
-          </DraggablePanel>
+          {/* Live News Ticker (Fixed Bottom) */}
+          <NewsFeed />
         </>
       )}
     </div>

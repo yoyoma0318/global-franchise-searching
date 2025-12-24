@@ -1,101 +1,106 @@
 'use client'
 
-import { useState } from 'react'
-import { NewsItem } from '@/types'
-import { recentNews } from '@/lib/data'
-import { Newspaper, ExternalLink, TrendingUp } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore'
+import { db } from '@/lib/firebase'
+import { ExternalLink } from 'lucide-react'
+
+interface NewsTickerItem {
+  id: string
+  title: string
+  link: string
+  source: string
+  published_at?: any
+  keyword?: string
+}
 
 export default function NewsFeed() {
-  const [news] = useState<NewsItem[]>(recentNews)
+  const [news, setNews] = useState<NewsTickerItem[]>([])
+  const [isHovered, setIsHovered] = useState(false)
 
-  const getDealTypeColor = (type?: string) => {
-    switch (type) {
-      case 'MF':
-        return 'bg-blue-500/20 text-blue-400'
-      case 'JV':
-        return 'bg-purple-500/20 text-purple-400'
-      case 'M&A':
-        return 'bg-green-500/20 text-green-400'
-      case 'expansion':
-        return 'bg-yellow-500/20 text-yellow-400'
-      default:
-        return 'bg-gray-500/20 text-gray-400'
+  useEffect(() => {
+    const fetchNews = async () => {
+      try {
+        const newsRef = collection(db, 'market_intel')
+        const q = query(newsRef, orderBy('collected_at', 'desc'), limit(20))
+        const snapshot = await getDocs(q)
+
+        const newsData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as NewsTickerItem[]
+
+        setNews(newsData)
+      } catch (error) {
+        console.error('뉴스 로딩 실패:', error)
+        // Fallback to sample data
+        setNews([
+          { id: '1', title: 'Starbucks expands to 100 new locations in Southeast Asia', link: '#', source: 'Reuters' },
+          { id: '2', title: 'McDonald\'s announces $2B investment in Asian markets', link: '#', source: 'Bloomberg' },
+          { id: '3', title: 'Korean coffee chain Mega Coffee enters Vietnam market', link: '#', source: 'Korea Herald' },
+        ])
+      }
+    }
+
+    fetchNews()
+  }, [])
+
+  const handleNewsClick = (link: string) => {
+    if (link && link !== '#') {
+      window.open(link, '_blank', 'noopener,noreferrer')
     }
   }
 
   return (
-    <div className="h-full flex flex-col">
-      {/* 눈에 띄는 헤더 */}
-      <div className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 border-b border-blue-500/30 p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-500/20 rounded-lg">
-              <Newspaper className="w-6 h-6 text-blue-400" />
-            </div>
-            <div>
-              <h3 className="text-xl font-bold flex items-center gap-2">
-                최신 뉴스 & 딜
-              </h3>
-              <p className="text-xs text-gray-400 mt-1">실시간 업데이트되는 Living Database</p>
-            </div>
+    <div className="fixed bottom-0 left-0 right-0 z-20 bg-black/90 backdrop-blur-md border-t border-red-500/50 shadow-2xl">
+      <div className="overflow-hidden h-12">
+        <div
+          className={`flex items-center h-full ${isHovered ? '' : 'animate-marquee'}`}
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+        >
+          {/* LIVE Badge */}
+          <div className="flex-shrink-0 px-4 py-2 bg-red-600/20 border-r border-red-500/30 flex items-center gap-2">
+            <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+            <span className="text-xs font-bold text-red-400 tracking-wider">LIVE INTEL</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-            <span className="text-xs text-green-400 font-semibold">LIVE</span>
-          </div>
+
+          {/* News Items - Duplicate for seamless loop */}
+          {[...news, ...news].map((item, index) => (
+            <div
+              key={`${item.id}-${index}`}
+              onClick={() => handleNewsClick(item.link)}
+              className="flex-shrink-0 px-6 py-2 flex items-center gap-3 cursor-pointer hover:bg-white/5 transition-colors group"
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-blue-400">
+                  [{item.source || 'News'}]
+                </span>
+                <span className="text-sm text-white font-medium">
+                  {item.title}
+                </span>
+                <ExternalLink className="w-3 h-3 text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+              </div>
+              <div className="w-px h-4 bg-gray-700 mx-2"></div>
+            </div>
+          ))}
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4">
+      <style jsx>{`
+        @keyframes marquee {
+          0% {
+            transform: translateX(0);
+          }
+          100% {
+            transform: translateX(-50%);
+          }
+        }
 
-      <div className="flex-1 overflow-y-auto space-y-3">
-        {news.map(item => (
-          <div
-            key={item.id}
-            className="bg-[#242424] rounded-lg p-4 hover:bg-[#2a2a2a] hover:border-l-4 hover:border-l-blue-500 transition-all cursor-pointer border-l-4 border-transparent"
-          >
-            <div className="flex items-start justify-between mb-2">
-              <h4 className="text-sm font-semibold flex-1">{item.title}</h4>
-              {item.dealType && (
-                <span
-                  className={`text-xs px-2 py-1 rounded ml-2 ${getDealTypeColor(
-                    item.dealType
-                  )}`}
-                >
-                  {item.dealType}
-                </span>
-              )}
-            </div>
-
-            {item.summary && (
-              <p className="text-xs text-gray-400 mb-3 leading-relaxed">
-                {item.summary}
-              </p>
-            )}
-
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-500">{item.source}</span>
-                <span className="text-xs text-gray-600">•</span>
-                <span className="text-xs text-gray-500">{item.publishedAt}</span>
-              </div>
-              {item.tags.length > 0 && (
-                <div className="flex gap-1">
-                  {item.tags.slice(0, 2).map(tag => (
-                    <span
-                      key={tag}
-                      className="text-xs px-2 py-0.5 bg-gray-700 rounded"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-      </div>
+        .animate-marquee {
+          animation: marquee 60s linear infinite;
+        }
+      `}</style>
     </div>
   )
 }

@@ -116,10 +116,10 @@ export default function CategoryChart({ companies, selectedCountry, loading }: C
           <div className="w-16 h-16 rounded-full bg-gray-800/50 flex items-center justify-center mx-auto mb-4">
             <TrendingUp className="w-8 h-8 text-gray-600" />
           </div>
-          <h3 className="text-lg font-semibold text-gray-300 mb-2">
+          <h3 className="text-lg font-semibold text-white mb-2">
             Not enough data for analytics
           </h3>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-300">
             {selectedCountry
               ? `No company data available for ${regionName}`
               : 'No company data available'}
@@ -137,10 +137,10 @@ export default function CategoryChart({ companies, selectedCountry, loading }: C
           <div className="w-16 h-16 rounded-full bg-gray-800/50 flex items-center justify-center mx-auto mb-4">
             <Store className="w-8 h-8 text-gray-600" />
           </div>
-          <h3 className="text-lg font-semibold text-gray-300 mb-2">
+          <h3 className="text-lg font-semibold text-white mb-2">
             Limited data available
           </h3>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-300">
             Need more data points for meaningful analytics
           </p>
         </div>
@@ -152,17 +152,17 @@ export default function CategoryChart({ companies, selectedCountry, loading }: C
     <div className="h-full flex flex-col p-4 overflow-y-auto">
       {/* 헤더 - 동적 지역명 포함 */}
       <div className="mb-4">
-        <h3 className="text-base font-bold mb-1">
+        <h3 className="text-base font-bold mb-1 text-white">
           {regionName} Category Distribution
         </h3>
-        <p className="text-xs text-gray-400">
+        <p className="text-xs text-gray-300">
           {filteredCompanies.length} companies • {categoryData.length} categories
         </p>
       </div>
 
       {/* 카테고리별 브랜드 수 차트 */}
       <div className="mb-6">
-        <h4 className="text-sm font-semibold text-gray-300 mb-3">
+        <h4 className="text-sm font-semibold text-white mb-3">
           Category Share (Brand Count)
         </h4>
         <div className="h-[180px]">
@@ -203,7 +203,7 @@ export default function CategoryChart({ companies, selectedCountry, loading }: C
 
       {/* Top 5 회사 (매장 수) */}
       <div className="mb-4">
-        <h4 className="text-sm font-semibold text-gray-300 mb-3">
+        <h4 className="text-sm font-semibold text-white mb-3">
           {regionName} Top 5 Companies (Store Count)
         </h4>
         {top5Companies.length > 0 ? (
@@ -265,7 +265,7 @@ export default function CategoryChart({ companies, selectedCountry, loading }: C
 
       {/* 카테고리 상세 정보 */}
       <div className="space-y-2">
-        <h4 className="text-sm font-semibold text-gray-300 mb-2">Category Details</h4>
+        <h4 className="text-sm font-semibold text-white mb-2">Category Details</h4>
         {categoryData.slice(0, 5).map((item, index) => (
           <div
             key={item.category}
@@ -277,7 +277,7 @@ export default function CategoryChart({ companies, selectedCountry, loading }: C
                   className="w-3 h-3 rounded-full"
                   style={{ backgroundColor: chartColors[index % chartColors.length] }}
                 />
-                <span className="text-sm font-medium text-gray-200">{item.categoryLabel}</span>
+                <span className="text-sm font-medium text-white">{item.categoryLabel}</span>
               </div>
               <div className="flex items-center gap-4 text-xs">
                 <div className="text-right">

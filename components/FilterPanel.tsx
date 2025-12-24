@@ -80,14 +80,14 @@ export default function FilterPanel({ filters, onFiltersChange }: FilterPanelPro
   return (
     <div className="h-full flex flex-col p-4">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-base font-bold flex items-center gap-2">
-          <Filter className="w-4 h-4" />
+        <h3 className="text-base font-bold flex items-center gap-2 text-white">
+          <Filter className="w-4 h-4 text-blue-400" />
           필터
         </h3>
         {activeFilterCount > 0 && (
           <button
             onClick={clearFilters}
-            className="text-xs text-gray-400 hover:text-gray-300 flex items-center gap-1"
+            className="text-xs text-gray-300 hover:text-white flex items-center gap-1 transition-colors"
           >
             <X className="w-3 h-3" />
           </button>
@@ -97,7 +97,7 @@ export default function FilterPanel({ filters, onFiltersChange }: FilterPanelPro
       <div className="flex-1 overflow-y-auto space-y-4">
         {/* Countries */}
         <div>
-          <h4 className="text-xs font-semibold mb-2 text-gray-400">국가</h4>
+          <h4 className="text-xs font-semibold mb-2 text-gray-300">국가</h4>
           <div className="space-y-1.5">
             {countries.map(country => (
               <button
@@ -117,7 +117,7 @@ export default function FilterPanel({ filters, onFiltersChange }: FilterPanelPro
 
         {/* Categories */}
         <div>
-          <h4 className="text-xs font-semibold mb-2 text-gray-400">카테고리</h4>
+          <h4 className="text-xs font-semibold mb-2 text-gray-300">카테고리</h4>
           <div className="space-y-1.5">
             {categories.map(category => (
               <button
@@ -137,7 +137,7 @@ export default function FilterPanel({ filters, onFiltersChange }: FilterPanelPro
 
         {/* Revenue Range */}
         <div>
-          <h4 className="text-xs font-semibold mb-2 text-gray-400">최소 매출</h4>
+          <h4 className="text-xs font-semibold mb-2 text-gray-300">최소 매출</h4>
           <div className="relative">
             <input
               type="number"
@@ -160,7 +160,7 @@ export default function FilterPanel({ filters, onFiltersChange }: FilterPanelPro
 
         {/* Public Status */}
         <div>
-          <h4 className="text-xs font-semibold mb-2 text-gray-400">상장 여부</h4>
+          <h4 className="text-xs font-semibold mb-2 text-gray-300">상장 여부</h4>
           <div className="space-y-1.5">
             <button
               onClick={() =>
@@ -196,12 +196,12 @@ export default function FilterPanel({ filters, onFiltersChange }: FilterPanelPro
         </div>
       </div>
 
-      <div className="mt-3 pt-3 border-t border-gray-800">
+      <div className="mt-3 pt-3 border-t border-white/10">
         <div className="text-xs text-center">
-          <div className="text-gray-400 mb-1">
+          <div className="text-gray-300 mb-1">
             {activeFilterCount > 0 ? `${activeFilterCount}개 필터 적용` : '필터 없음'}
           </div>
-          <div className={`font-semibold ${filteredCount > 0 ? 'text-blue-400' : 'text-gray-500'}`}>
+          <div className={`font-semibold ${filteredCount > 0 ? 'text-blue-400' : 'text-gray-400'}`}>
             {filteredCount}개 기업 표시
           </div>
         </div>

@@ -108,18 +108,19 @@ export default function DraggablePanel({
       onMouseDown={handleMouseDown}
       className={`
         ${isDragging ? 'z-30 cursor-grabbing' : 'z-10 cursor-default'}
-        ${isDragging ? '' : 'transition-all duration-200'}
-        bg-[#1a1a1a]/95 backdrop-blur-md
-        rounded-xl shadow-2xl
-        border border-gray-700/50
+        ${isDragging ? 'scale-105' : 'transition-all duration-300 ease-out'}
+        bg-black/80 backdrop-blur-md
+        rounded-2xl shadow-2xl
+        border border-white/10
         overflow-hidden
+        hover:border-white/20 hover:shadow-3xl
         ${className}
       `}
     >
       {title && (
-        <div className="drag-handle cursor-move bg-gradient-to-r from-blue-500/10 to-purple-500/10 border-b border-gray-700/50 px-4 py-3 flex items-center gap-2">
-          <GripVertical className="w-4 h-4 text-gray-400" />
-          <h3 className="text-sm font-semibold text-gray-200">{title}</h3>
+        <div className="drag-handle cursor-move bg-gradient-to-r from-blue-500/20 to-purple-500/20 border-b border-white/10 px-4 py-3 flex items-center gap-2 backdrop-blur-sm">
+          <GripVertical className="w-4 h-4 text-white/60" />
+          <h3 className="text-sm font-bold text-white tracking-wide">{title}</h3>
         </div>
       )}
       <div className={title ? '' : 'drag-handle cursor-move'}>
