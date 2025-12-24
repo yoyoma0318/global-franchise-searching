@@ -13,6 +13,11 @@ import time
 import schedule
 from typing import List, Dict
 import random
+import sys
+from dotenv import load_dotenv
+
+# Load environment variables from .env.local
+load_dotenv('.env.local')
 
 # Target cities for data collection
 TARGET_CITIES = [
@@ -45,21 +50,39 @@ def initialize_firebase():
     """Initialize Firebase Admin SDK if not already initialized"""
     if not firebase_admin._apps:
         cred_path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
+        project_id = os.getenv('NEXT_PUBLIC_FIREBASE_PROJECT_ID') or os.getenv('FIREBASE_PROJECT_ID')
+        
         if cred_path and os.path.exists(cred_path):
             cred = credentials.Certificate(cred_path)
+            firebase_admin.initialize_app(cred, {
+                'projectId': project_id
+            })
         else:
-            cred = credentials.ApplicationDefault()
-
-        firebase_admin.initialize_app(cred)
+            # Try to use Application Default Credentials
+            try:
+                if project_id:
+                    cred = credentials.ApplicationDefault()
+                    firebase_admin.initialize_app(cred, {
+                        'projectId': project_id
+                    })
+                else:
+                    raise ValueError("Firebase project ID not found. Set NEXT_PUBLIC_FIREBASE_PROJECT_ID or FIREBASE_PROJECT_ID in .env.local")
+            except Exception as e:
+                print(f"\n❌ Firebase 인증 설정 필요:")
+                print(f"   1. Firebase Console에서 서비스 계정 키 파일을 다운로드하세요")
+                print(f"   2. 환경 변수 GOOGLE_APPLICATION_CREDENTIALS에 파일 경로를 설정하세요")
+                print(f"   3. 또는 Application Default Credentials를 설정하세요")
+                print(f"   에러: {str(e)}\n")
+                raise
 
     return firestore.client()
 
 # Initialize Google Maps client
 def initialize_google_maps():
     """Initialize Google Maps API client"""
-    api_key = os.getenv('GOOGLE_MAPS_API_KEY')
+    api_key = os.getenv('GOOGLE_MAPS_API_KEY') or os.getenv('NEXT_PUBLIC_GOOGLE_MAPS_API_KEY')
     if not api_key:
-        raise ValueError("GOOGLE_MAPS_API_KEY environment variable not set")
+        raise ValueError("GOOGLE_MAPS_API_KEY or NEXT_PUBLIC_GOOGLE_MAPS_API_KEY environment variable not set. Set it in .env.local")
 
     return googlemaps.Client(key=api_key)
 
@@ -164,13 +187,17 @@ def collect_from_city_keyword(gmaps, db, city, keyword):
                 place_details = gmaps.place(place_id=place_id, fields=[
                     'name', 'formatted_address', 'formatted_phone_number',
                     'website', 'rating', 'user_ratings_total', 'geometry',
-                    'types', 'business_status', 'opening_hours', 'price_level'
+                    'type', 'business_status', 'opening_hours', 'price_level'
                 ])
 
                 if place_details.get('status') != 'OK':
                     continue
 
                 detailed_place = place_details.get('result', {})
+                
+                # Add types from original search result (not available in place details fields)
+                if 'types' in place:
+                    detailed_place['types'] = place.get('types', [])
 
                 # Extract company data
                 company_data = extract_company_data(detailed_place, city)
@@ -264,12 +291,21 @@ def main():
     print("\n" + "🎯" * 35)
     print("  Global Franchise Data Collector")
     print("🎯" * 35)
-    print("\n모드 선택:")
-    print("  1. 연속 수집 모드 (10분마다 자동 실행)")
-    print("  2. 전체 스캔 모드 (모든 도시/키워드 1회 실행)")
-    print("  3. 단일 실행 (1회만 실행)")
-
-    mode = input("\n선택 (1/2/3): ").strip()
+    
+    # Check for command line argument
+    if len(sys.argv) > 1:
+        mode = sys.argv[1].strip()
+    else:
+        print("\n모드 선택:")
+        print("  1. 연속 수집 모드 (10분마다 자동 실행)")
+        print("  2. 전체 스캔 모드 (모든 도시/키워드 1회 실행)")
+        print("  3. 단일 실행 (1회만 실행)")
+        try:
+            mode = input("\n선택 (1/2/3): ").strip()
+        except EOFError:
+            # Default to single run mode if no input available
+            print("\n입력 없음, 기본값으로 단일 실행 모드 선택")
+            mode = "3"
 
     try:
         if mode == "1":
