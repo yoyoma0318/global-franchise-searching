@@ -13,14 +13,13 @@ interface NewsItem {
   published_at: string;
 }
 
-export default function NewsFeed() {
+export default function NewsFeed({ currentRegion }: { currentRegion?: string }) {
   const [news, setNews] = useState<NewsItem[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [isHovered, setIsHovered] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   useEffect(() => {
-    // Firestore 실시간 구독
-    const q = query(collection(db, 'market_intel'), orderBy('published_at', 'desc'), limit(10));
+    // Firestore에서 최신 뉴스 5개 가져오기
+    const q = query(collection(db, 'market_intel'), orderBy('published_at', 'desc'), limit(5));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as NewsItem));
       setNews(items);
@@ -28,82 +27,60 @@ export default function NewsFeed() {
     return () => unsubscribe();
   }, []);
 
-  // 4초 간격 롤링 애니메이션
-  useEffect(() => {
-    if (isHovered || news.length === 0) return;
-    const interval = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % news.length);
-    }, 4000);
-    return () => clearInterval(interval);
-  }, [news.length, isHovered]);
-
   if (news.length === 0) return null;
+
+  // 평소에는 상위 3개만 노출, 마우스를 올리면(isExpanded) 전체 노출
+  const displayNews = isExpanded ? news : news.slice(0, 3);
 
   return (
     <div 
-      className="group w-80 perspective"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      className="flex flex-col gap-0 w-80 transition-all duration-300 font-sans"
+      onMouseEnter={() => setIsExpanded(true)}
+      onMouseLeave={() => setIsExpanded(false)}
     >
-      {/* 메인 카드 (Dark Glassmorphism) */}
-      <div className={`
-        bg-stone-900/90 backdrop-blur-md border border-white/10 rounded-2xl p-4 shadow-2xl transition-all duration-300
-        ${isHovered ? 'rounded-b-none' : 'hover:scale-[1.02]'}
-      `}>
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2 text-emerald-400">
-            <NewspaperIcon className="w-4 h-4" />
-            <span className="text-xs font-bold tracking-wider uppercase">Market Briefing</span>
-          </div>
-          <div className="flex gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
-            <span className="text-[10px] text-stone-400 font-medium">LIVE</span>
-          </div>
+      {/* 1. 헤더 (Briefing Badge) */}
+      <div className="flex items-center justify-between bg-slate-900/95 backdrop-blur-md text-white px-4 py-3 rounded-t-xl shadow-lg border-b border-slate-700 z-10">
+        <div className="flex items-center gap-2">
+          <NewspaperIcon className="w-4 h-4 text-orange-400" />
+          <span className="text-xs font-bold tracking-wide uppercase">Market Briefing</span>
         </div>
-
-        {/* 롤링 헤드라인 */}
-        <div className="h-12 flex items-center relative overflow-hidden">
-          {news.map((item, idx) => (
-            <div 
-              key={item.id}
-              className={`absolute w-full transition-all duration-500 ease-in-out transform ${
-                idx === currentIndex 
-                  ? 'opacity-100 translate-y-0' 
-                  : 'opacity-0 translate-y-4'
-              }`}
-            >
-              <a href={item.url} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-white hover:text-emerald-300 line-clamp-2 leading-snug">
-                {item.title}
-              </a>
-            </div>
-          ))}
-        </div>
+        <span className="text-[10px] bg-orange-500/20 text-orange-400 px-2 py-0.5 rounded-full font-bold border border-orange-500/30 animate-pulse">
+          LIVE
+        </span>
       </div>
 
-      {/* 드롭다운 리스트 (Hover시 펼쳐짐) */}
-      <div className={`
-        absolute top-full left-0 right-0 bg-stone-900/95 backdrop-blur-xl border-x border-b border-white/10 rounded-b-2xl overflow-hidden transition-all duration-300 origin-top z-30
-        ${isHovered ? 'max-h-96 opacity-100 shadow-xl' : 'max-h-0 opacity-0'}
-      `}>
-        <div className="p-2 flex flex-col gap-1 max-h-80 overflow-y-auto">
-          {news.map((item) => (
-            <a 
-              key={item.id} 
-              href={item.url} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="p-3 rounded-xl hover:bg-white/10 group/item transition-colors block"
-            >
-              <p className="text-xs text-stone-400 mb-1 flex justify-between">
-                <span className="truncate max-w-[120px]">{item.source || 'Global News'}</span>
-                <span>{item.published_at ? new Date(item.published_at).toLocaleDateString() : ''}</span>
-              </p>
-              <p className="text-sm text-stone-200 group-hover/item:text-emerald-300 transition-colors line-clamp-2">
-                {item.title}
-              </p>
-            </a>
-          ))}
-        </div>
+      {/* 2. 뉴스 리스트 스택 (White Glass) */}
+      <div className="bg-white/95 backdrop-blur-md rounded-b-xl shadow-2xl border-x border-b border-slate-200 overflow-hidden flex flex-col divide-y divide-slate-100">
+        {displayNews.map((item) => (
+          <a 
+            key={item.id}
+            href={item.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="p-4 hover:bg-indigo-50 transition-colors group block"
+          >
+            <div className="flex items-center justify-between mb-1.5">
+              {/* 소스 태그 (예: [Global], [Bloomberg]) */}
+              <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">
+                {item.source || 'Global'}
+              </span>
+              <span className="text-[10px] text-slate-400">
+                {item.published_at ? new Date(item.published_at).toLocaleDateString() : ''}
+              </span>
+            </div>
+            {/* 뉴스 제목 */}
+            <h4 className="text-xs font-semibold text-slate-800 leading-snug group-hover:text-indigo-700 line-clamp-2">
+              {item.title}
+            </h4>
+          </a>
+        ))}
+        
+        {/* 3. 확장 안내 힌트 (Hover 안 했을 때만 보임) */}
+        {!isExpanded && news.length > 3 && (
+          <div className="bg-slate-50 py-1.5 text-center text-[10px] text-slate-400 font-medium border-t border-slate-100 uppercase tracking-wider">
+            Hover to see more
+          </div>
+        )}
       </div>
     </div>
   );

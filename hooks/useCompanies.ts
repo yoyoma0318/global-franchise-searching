@@ -1,192 +1,59 @@
-import { useState, useEffect } from 'react'
-import {
-  collection,
-  query,
-  where,
-  getDocs,
-  onSnapshot,
-  QueryConstraint,
-  orderBy
-} from 'firebase/firestore'
-import { db } from '@/lib/firebase'
-import { Company, FilterState } from '@/types'
+import { useState, useEffect } from 'react';
+import { db } from '@/lib/firebase';
+import { collection, query, orderBy, onSnapshot, FirestoreError } from 'firebase/firestore';
 
-export interface UseCompaniesResult {
-  companies: Company[]
-  loading: boolean
-  error: Error | null
-  refetch: () => Promise<void>
+export interface Company {
+  id: string;
+  name: string;
+  category: string;
+  region: string;
+  country?: string;
+  description?: string;
+  status?: string;
+  metrics?: {
+    revenue?: string;
+    store_count?: number;
+  };
+  brands?: { name: string; category: string }[];
+  // 필요한 필드들을 유연하게 정의
+  [key: string]: any; 
 }
 
-/**
- * Custom hook to fetch companies from Firebase Firestore
- * Supports real-time updates and filtering
- *
- * @param filters - Optional filter state to filter companies
- * @param realtime - Enable real-time updates (default: false)
- */
-export function useCompanies(
-  filters?: FilterState,
-  realtime: boolean = false
-): UseCompaniesResult {
-  const [companies, setCompanies] = useState<Company[]>([])
-  const [loading, setLoading] = useState<boolean>(true)
-  const [error, setError] = useState<Error | null>(null)
-
-  const fetchCompanies = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-
-      // Build query with filters
-      const constraints: QueryConstraint[] = []
-
-      if (filters?.countries && filters.countries.length > 0) {
-        constraints.push(where('country', 'in', filters.countries))
-      }
-
-      if (filters?.isPublic !== undefined) {
-        constraints.push(where('isPublic', '==', filters.isPublic))
-      }
-
-      if (filters?.minRevenue !== undefined) {
-        constraints.push(where('revenue', '>=', filters.minRevenue))
-      }
-
-      if (filters?.maxRevenue !== undefined) {
-        constraints.push(where('revenue', '<=', filters.maxRevenue))
-      }
-
-      // Add ordering
-      constraints.push(orderBy('name', 'asc'))
-
-      const companiesRef = collection(db, 'companies')
-      const q = query(companiesRef, ...constraints)
-      const querySnapshot = await getDocs(q)
-
-      const companiesData: Company[] = []
-      querySnapshot.forEach((doc) => {
-        companiesData.push({ id: doc.id, ...doc.data() } as Company)
-      })
-
-      // Client-side filtering for categories (since we can't use 'in' with brand categories in a simple way)
-      let filteredCompanies = companiesData
-      if (filters?.categories && filters.categories.length > 0) {
-        filteredCompanies = companiesData.filter(company =>
-          company.brands.some(brand =>
-            filters.categories?.includes(brand.category)
-          )
-        )
-      }
-
-      setCompanies(filteredCompanies)
-    } catch (err) {
-      console.error('Error fetching companies:', err)
-      setError(err as Error)
-    } finally {
-      setLoading(false)
-    }
-  }
+export function useCompanies() {
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (realtime) {
-      // Real-time listener
-      const constraints: QueryConstraint[] = []
+    setLoading(true);
+    
+    // 1. 기본 쿼리: 회사 컬렉션을 가져옵니다.
+    // (복잡한 필터나 정렬은 클라이언트에서 처리하여 인덱스 에러를 방지합니다)
+    const q = query(collection(db, 'companies'));
 
-      if (filters?.countries && filters.countries.length > 0) {
-        constraints.push(where('country', 'in', filters.countries))
+    // 2. 실시간 구독 (onSnapshot)
+    const unsubscribe = onSnapshot(q, 
+      (snapshot) => {
+        const fetchedCompanies: Company[] = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        } as Company));
+
+        console.log(`✅ Fetched ${fetchedCompanies.length} companies from Firestore.`);
+        setCompanies(fetchedCompanies);
+        setLoading(false); // 로딩 끝!
+      },
+      (err: FirestoreError) => {
+        console.error("❌ Firestore Error:", err);
+        // 에러가 나도 로딩은 끝내야 화면이 나옵니다.
+        setError(err.message); 
+        setLoading(false); 
       }
+    );
 
-      if (filters?.isPublic !== undefined) {
-        constraints.push(where('isPublic', '==', filters.isPublic))
-      }
+    // 컴포넌트가 사라질 때 구독 해제
+    return () => unsubscribe();
+  }, []);
 
-      constraints.push(orderBy('name', 'asc'))
-
-      const companiesRef = collection(db, 'companies')
-      const q = query(companiesRef, ...constraints)
-
-      const unsubscribe = onSnapshot(
-        q,
-        (querySnapshot) => {
-          const companiesData: Company[] = []
-          querySnapshot.forEach((doc) => {
-            companiesData.push({ id: doc.id, ...doc.data() } as Company)
-          })
-
-          // Client-side filtering for categories
-          let filteredCompanies = companiesData
-          if (filters?.categories && filters.categories.length > 0) {
-            filteredCompanies = companiesData.filter(company =>
-              company.brands.some(brand =>
-                filters.categories?.includes(brand.category)
-              )
-            )
-          }
-
-          setCompanies(filteredCompanies)
-          setLoading(false)
-        },
-        (err) => {
-          console.error('Error in real-time listener:', err)
-          setError(err as Error)
-          setLoading(false)
-        }
-      )
-
-      return () => unsubscribe()
-    } else {
-      // One-time fetch
-      fetchCompanies()
-    }
-  }, [filters, realtime])
-
-  return {
-    companies,
-    loading,
-    error,
-    refetch: fetchCompanies,
-  }
-}
-
-/**
- * Helper function to get a single company by ID
- */
-export function useCompany(companyId: string | null) {
-  const [company, setCompany] = useState<Company | null>(null)
-  const [loading, setLoading] = useState<boolean>(true)
-  const [error, setError] = useState<Error | null>(null)
-
-  useEffect(() => {
-    if (!companyId) {
-      setCompany(null)
-      setLoading(false)
-      return
-    }
-
-    const fetchCompany = async () => {
-      try {
-        setLoading(true)
-        const companiesRef = collection(db, 'companies')
-        const q = query(companiesRef, where('id', '==', companyId))
-        const querySnapshot = await getDocs(q)
-
-        if (!querySnapshot.empty) {
-          const doc = querySnapshot.docs[0]
-          setCompany({ id: doc.id, ...doc.data() } as Company)
-        } else {
-          setCompany(null)
-        }
-      } catch (err) {
-        console.error('Error fetching company:', err)
-        setError(err as Error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchCompany()
-  }, [companyId])
-
-  return { company, loading, error }
+  return { companies, loading, error };
 }
