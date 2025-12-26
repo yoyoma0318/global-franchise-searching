@@ -12,6 +12,9 @@ feedparser==6.0.11
 # Task Scheduling
 schedule==1.2.0
 
+# Environment Variables
+python-dotenv==1.0.0
+
 # HTTP Requests (if needed)
 requests==2.31.0
 

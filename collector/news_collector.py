@@ -12,6 +12,10 @@ from urllib.parse import quote
 import os
 import time
 import hashlib
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv('.env.local')
 
 # Initialize Firebase Admin SDK
 def initialize_firebase():
@@ -19,30 +23,41 @@ def initialize_firebase():
     if not firebase_admin._apps:
         # Get credentials from environment or use default
         cred_path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
-        if cred_path and os.path.exists(cred_path):
-            cred = credentials.Certificate(cred_path)
-        else:
-            # Use default credentials (for deployed environments)
-            cred = credentials.ApplicationDefault()
+        project_id = os.getenv('NEXT_PUBLIC_FIREBASE_PROJECT_ID') or os.getenv('FIREBASE_PROJECT_ID')
 
-        firebase_admin.initialize_app(cred)
+        if cred_path and os.path.exists(cred_path):
+            print(f"✓ Firebase 인증 파일 발견: {cred_path}")
+            cred = credentials.Certificate(cred_path)
+            firebase_admin.initialize_app(cred, {
+                'projectId': project_id
+            })
+        else:
+            print("⚠️  GOOGLE_APPLICATION_CREDENTIALS not set, using Application Default Credentials")
+            if project_id:
+                cred = credentials.ApplicationDefault()
+                firebase_admin.initialize_app(cred, {
+                    'projectId': project_id
+                })
+            else:
+                raise ValueError("Firebase project ID not found. Set NEXT_PUBLIC_FIREBASE_PROJECT_ID in .env.local")
 
     return firestore.client()
 
 # RSS Feed URLs for Google News
-NEWS_KEYWORDS = [
-    'F&B Franchise Expansion Asia',
-    'Restaurant M&A',
-    'K-Food Global',
-    'Coffee Chain Expansion',
-    'Quick Service Restaurant Asia',
-    'Food Franchise Investment'
+NEWS_TOPICS = [
+    {
+        'name': 'Restaurant Industry Asia',
+        'url': 'https://news.google.com/rss/search?q=Restaurant+Industry+Asia&hl=en-US&gl=US&ceid=US:en'
+    },
+    {
+        'name': 'F&B Franchise Expansion',
+        'url': 'https://news.google.com/rss/search?q=F%26B+Franchise+Expansion&hl=en-US&gl=US&ceid=US:en'
+    },
+    {
+        'name': 'Restaurant M&A Asia',
+        'url': 'https://news.google.com/rss/search?q=Restaurant+M%26A+Asia&hl=en-US&gl=US&ceid=US:en'
+    }
 ]
-
-def get_google_news_rss_url(keyword):
-    """Generate Google News RSS feed URL for a keyword"""
-    encoded_keyword = quote(keyword)
-    return f"https://news.google.com/rss/search?q={encoded_keyword}&hl=en-US&gl=US&ceid=US:en"
 
 def generate_article_id(link):
     """Generate unique ID from article link"""
@@ -51,23 +66,22 @@ def generate_article_id(link):
 def parse_published_date(date_string):
     """Parse published date from RSS feed"""
     try:
-        # Try parsing common date formats
         from email.utils import parsedate_to_datetime
         return parsedate_to_datetime(date_string)
     except:
         return datetime.now()
 
-def collect_news_from_keyword(db, keyword):
-    """Collect news for a specific keyword"""
-    print(f"🔍 수집 중... 키워드: '{keyword}'")
+def collect_news_from_topic(db, topic_name, rss_url):
+    """Collect news from a specific RSS feed"""
+    print(f"\n🔍 수집 시작... 토픽: '{topic_name}'")
+    print(f"   RSS: {rss_url}")
 
     try:
-        # Get RSS feed
-        rss_url = get_google_news_rss_url(keyword)
+        # Parse RSS feed
         feed = feedparser.parse(rss_url)
 
         if not feed.entries:
-            print(f"   ⚠️  뉴스 없음: {keyword}")
+            print(f"   ⚠️  뉴스 없음")
             return 0
 
         collected_count = 0
@@ -94,19 +108,19 @@ def collect_news_from_keyword(db, keyword):
 
                 # Extract source from link (domain name)
                 from urllib.parse import urlparse
-                source = urlparse(entry.link).netloc.replace('www.', '')
+                source = urlparse(entry.link).netloc.replace('www.', '').replace('news.google.com', 'Google News')
 
-                # Get summary (use description or first 200 chars of title)
+                # Get summary
                 summary = entry.summary if hasattr(entry, 'summary') else entry.title[:200]
 
                 # Prepare document data
                 article_data = {
                     'title': entry.title,
                     'link': entry.link,
-                    'published_at': published_at,
                     'source': source,
+                    'published_at': published_at,
                     'summary': summary,
-                    'keyword': keyword,
+                    'topic': topic_name,
                     'collected_at': datetime.now(),
                     'type': 'news'
                 }
@@ -115,38 +129,40 @@ def collect_news_from_keyword(db, keyword):
                 doc_ref.set(article_data)
                 collected_count += 1
 
-                print(f"   ✅ [{source}] {entry.title[:50]}...")
+                print(f"   ✅ 뉴스 [{entry.title[:60]}...] 저장 완료")
 
             except Exception as e:
                 print(f"   ❌ 에러 (항목 처리): {str(e)}")
                 continue
 
-        print(f"   📊 완료: {collected_count}개 수집, {skipped_count}개 스킵\n")
+        print(f"   📊 완료: {collected_count}개 수집, {skipped_count}개 스킵")
         return collected_count
 
     except Exception as e:
-        print(f"   ❌ 에러 (키워드 '{keyword}'): {str(e)}\n")
+        print(f"   ❌ 에러 (토픽 '{topic_name}'): {str(e)}")
         return 0
 
 def collect_all_news():
-    """Collect news from all keywords"""
-    print("=" * 60)
-    print("🚀 뉴스 수집 시작")
-    print("=" * 60)
+    """Collect news from all topics"""
+    print("\n" + "=" * 70)
+    print("🚀 뉴스 수집기 시작")
+    print("=" * 70)
 
     # Initialize Firebase
+    print("\n📡 Firebase 연결 중...")
     db = initialize_firebase()
+    print("✓ Firebase 연결 완료\n")
 
     total_collected = 0
 
-    for keyword in NEWS_KEYWORDS:
-        collected = collect_news_from_keyword(db, keyword)
+    for topic in NEWS_TOPICS:
+        collected = collect_news_from_topic(db, topic['name'], topic['url'])
         total_collected += collected
-        time.sleep(2)  # Be nice to Google News servers
+        time.sleep(2)  # Rate limiting
 
-    print("=" * 60)
-    print(f"✅ 수집 완료! 총 {total_collected}개의 뉴스 수집됨")
-    print("=" * 60)
+    print("\n" + "=" * 70)
+    print(f"✅ 전체 수집 완료! 총 {total_collected}개의 뉴스가 market_intel 컬렉션에 저장됨")
+    print("=" * 70 + "\n")
 
     return total_collected
 

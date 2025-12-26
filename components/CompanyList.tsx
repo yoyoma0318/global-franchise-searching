@@ -1,113 +1,70 @@
-'use client'
+'use client';
 
-import { Company } from '@/types'
-import { Building2, MapPin, TrendingUp } from 'lucide-react'
+import React from 'react';
+import { ArrowRightIcon } from '@heroicons/react/24/solid';
 
-interface CompanyListProps {
-  companies: Company[]
-  selectedCompanyId?: string | null
-  onCompanyClick?: (companyId: string) => void
-  loading?: boolean
+// 데이터 타입 정의
+interface Company {
+  id: string;
+  name: string;
+  category: string;
+  region: string;
+  country?: string;
+  metrics?: {
+    revenue?: string;
+    store_count?: number;
+  };
+  status?: string;
 }
 
-export default function CompanyList({
-  companies,
-  selectedCompanyId,
-  onCompanyClick,
-  loading = false
-}: CompanyListProps) {
-  if (loading) {
-    return (
-      <div className="p-6 space-y-4">
-        {[...Array(5)].map((_, i) => (
-          <div key={i} className="animate-pulse">
-            <div className="h-20 bg-gray-800 rounded-lg"></div>
-          </div>
-        ))}
-      </div>
-    )
-  }
-
-  if (companies.length === 0) {
-    return (
-      <div className="p-6 text-center text-gray-400">
-        <Building2 className="w-12 h-12 mx-auto mb-2 opacity-50" />
-        <p>No companies found</p>
-      </div>
-    )
-  }
-
+export default function CompanyList({ companies }: { companies: Company[] }) {
   return (
-    <div className="divide-y divide-gray-800">
+    // 그리드 레이아웃: 화면 크기에 따라 1열 ~ 4열로 자동 조정됨
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      
       {companies.map((company) => (
-        <div
+        <div 
           key={company.id}
-          className={`p-4 cursor-pointer transition-all hover:bg-gray-800/50 ${
-            selectedCompanyId === company.id
-              ? 'bg-blue-500/10 border-l-4 border-blue-500'
-              : ''
-          }`}
-          onClick={() => onCompanyClick?.(company.id)}
+          className="group bg-white border border-stone-200 rounded-xl p-5 hover:border-emerald-500 hover:shadow-[0_4px_20px_rgba(16,185,129,0.15)] transition-all cursor-pointer relative overflow-hidden"
         >
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex-1 min-w-0">
-              {/* Company Name */}
-              <h3 className="font-semibold text-white truncate mb-1">
-                {company.name}
-              </h3>
+          {/* 우측 상단: 상장 여부 뱃지 */}
+          <div className="absolute top-4 right-4">
+            <span className={`text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wide ${
+              company.status === 'Listed' ? 'bg-stone-900 text-white' : 'bg-stone-100 text-stone-500'
+            }`}>
+              {company.status || 'Private'}
+            </span>
+          </div>
 
-              {/* Location */}
-              <div className="flex items-center gap-1 text-sm text-gray-400 mb-2">
-                <MapPin className="w-3 h-3" />
-                <span className="capitalize">
-                  {company.city ? `${company.city}, ` : ''}
-                  {company.country.replace('-', ' ')}
-                </span>
-              </div>
-
-              {/* Brands */}
-              <div className="flex flex-wrap gap-1 mb-2">
-                {company.brands.slice(0, 3).map((brand) => (
-                  <span
-                    key={brand.id}
-                    className="text-xs px-2 py-1 rounded bg-gray-800 text-gray-300"
-                  >
-                    {brand.name}
-                  </span>
-                ))}
-                {company.brands.length > 3 && (
-                  <span className="text-xs px-2 py-1 rounded bg-gray-800 text-gray-400">
-                    +{company.brands.length - 3} more
-                  </span>
-                )}
-              </div>
-
-              {/* Revenue */}
-              {company.revenue && (
-                <div className="flex items-center gap-1 text-xs text-green-400">
-                  <TrendingUp className="w-3 h-3" />
-                  <span>${company.revenue}M revenue</span>
-                </div>
-              )}
+          {/* 회사 정보 영역 */}
+          <div className="mb-4">
+            {/* 로고 (이니셜) */}
+            <div className="w-10 h-10 bg-stone-100 rounded-lg flex items-center justify-center text-lg font-bold text-stone-600 mb-3 group-hover:bg-emerald-50 group-hover:text-emerald-600 transition-colors">
+              {company.name.charAt(0)}
             </div>
+            {/* 회사명 */}
+            <h3 className="font-bold text-stone-800 text-lg truncate pr-16">{company.name}</h3>
+            {/* 카테고리 및 지역 */}
+            <p className="text-stone-500 text-xs font-medium uppercase tracking-wide mt-1">
+              {company.category} • {company.region}
+            </p>
+          </div>
 
-            {/* Logo or Icon */}
-            <div className="flex-shrink-0">
-              {company.logo ? (
-                <img
-                  src={company.logo}
-                  alt={company.name}
-                  className="w-12 h-12 rounded-lg object-cover"
-                />
-              ) : (
-                <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
-                  <Building2 className="w-6 h-6 text-white" />
-                </div>
-              )}
+          {/* 하단 통계 및 화살표 */}
+          <div className="flex items-end justify-between border-t border-stone-100 pt-3 mt-3">
+            <div>
+              <p className="text-[10px] text-stone-400 font-semibold uppercase">Total Stores</p>
+              <p className="font-bold text-stone-800 font-mono text-lg">
+                {company.metrics?.store_count?.toLocaleString() || '-'}
+              </p>
+            </div>
+            {/* 화살표 아이콘 */}
+            <div className="w-8 h-8 rounded-full bg-stone-50 flex items-center justify-center text-stone-400 group-hover:bg-emerald-600 group-hover:text-white transition-all transform group-hover:translate-x-1">
+              <ArrowRightIcon className="w-4 h-4" />
             </div>
           </div>
         </div>
       ))}
     </div>
-  )
+  );
 }

@@ -1,155 +1,70 @@
-'use client'
+'use client';
 
-import { useState, useMemo } from 'react'
-import Header from './Header'
-import MapView from './MapView'
-import CompanyProfile from './CompanyProfile'
-import BrandPortfolio from './BrandPortfolio'
-import NewsFeed from './NewsFeed'
-import CategoryChart from './CategoryChart'
-import FilterPanel from './FilterPanel'
-import DraggablePanel from './DraggablePanel'
-import { Company, MapViewState, FilterState } from '@/types'
-import { useCompanies } from '@/hooks'
+import React from 'react';
+import { ArrowRightIcon } from '@heroicons/react/24/solid';
 
-/**
- * Dashboard component using Firebase for data
- * This is a refactored version that separates concerns and uses custom hooks
- */
-export default function DashboardFirebase() {
-  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null)
-  const [mapState, setMapState] = useState<MapViewState>({
-    zoom: 4,
-    center: { lat: 3.1390, lng: 101.6869 }, // Southeast Asia center
-    viewLevel: 'region',
-  })
-  const [filters, setFilters] = useState<FilterState>({})
-  const [selectedBrandId, setSelectedBrandId] = useState<string | null>(null)
+// 데이터 타입 정의
+interface Company {
+  id: string;
+  name: string;
+  category: string;
+  region: string;
+  country?: string;
+  metrics?: {
+    revenue?: string;
+    store_count?: number;
+  };
+  status?: string;
+}
 
-  // Fetch companies from Firebase with filters
-  // Set realtime to true for live updates, false for one-time fetch
-  const { companies, loading, error } = useCompanies(filters, false)
-
-  const handleCompanySelect = (companyId: string) => {
-    const company = companies.find(c => c.id === companyId)
-    if (company) {
-      setSelectedCompany(company)
-      setMapState({
-        ...mapState,
-        center: company.headquarters,
-        zoom: 10,
-        selectedCompany: companyId,
-      })
-    }
-  }
-
-  const handleMapClick = (companyId?: string) => {
-    if (companyId) {
-      handleCompanySelect(companyId)
-    }
-  }
-
-  // Calculate filtered count for header
-  const filteredCount = useMemo(() => {
-    return companies.length
-  }, [companies])
-
-  const totalCount = useMemo(() => {
-    // This would ideally come from a total companies query
-    // For now, using the same as filtered
-    return companies.length
-  }, [companies])
-
+export default function CompanyList({ companies }: { companies: Company[] }) {
   return (
-    <div className="relative min-h-screen bg-[#0a0a0a] text-[#ededed] overflow-hidden">
-      {/* Header with Map Info - z-20 */}
-      <Header
-        mapState={mapState}
-        filteredCount={filteredCount}
-        totalCount={totalCount}
-      />
-
-      {/* Show loading or error states */}
-      {loading && (
-        <div className="absolute inset-0 flex items-center justify-center z-50 bg-[#0a0a0a]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
-            <p className="text-gray-400 mt-4">Loading companies...</p>
-          </div>
-        </div>
-      )}
-
-      {error && (
-        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-50 bg-red-500/10 border border-red-500 rounded-lg p-4 max-w-md">
-          <p className="text-red-400">Error loading data: {error.message}</p>
-          <p className="text-sm text-gray-400 mt-2">
-            Make sure Firebase is configured in your .env.local file
-          </p>
-        </div>
-      )}
-
-      {/* Full-Screen Map - z-0 */}
-      {!loading && (
-        <>
-          <div className="absolute inset-0 z-0">
-            <MapView
-              mapState={mapState}
-              onMapStateChange={setMapState}
-              onCompanyClick={handleMapClick}
-              filters={filters}
-              selectedBrandId={selectedBrandId}
-            />
+    // 그리드 레이아웃: 화면 크기에 따라 1열 ~ 4열로 자동 조정됨
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      
+      {companies.map((company) => (
+        <div 
+          key={company.id}
+          className="group bg-white border border-stone-200 rounded-xl p-5 hover:border-emerald-500 hover:shadow-[0_4px_20px_rgba(16,185,129,0.15)] transition-all cursor-pointer relative overflow-hidden"
+        >
+          {/* 우측 상단: 상장 여부 뱃지 */}
+          <div className="absolute top-4 right-4">
+            <span className={`text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wide ${
+              company.status === 'Listed' ? 'bg-stone-900 text-white' : 'bg-stone-100 text-stone-500'
+            }`}>
+              {company.status || 'Private'}
+            </span>
           </div>
 
-          {/* Floating Panel: Filter (Top-Left) */}
-          <DraggablePanel
-            title="필터"
-            initialPosition={{ top: 90, left: 16 }}
-            width="384px"
-            className="max-h-[calc(100vh-120px)]"
-          >
-            <FilterPanel filters={filters} onFiltersChange={setFilters} />
-          </DraggablePanel>
-
-          {/* Floating Panel: Category Chart (Top-Right) */}
-          <DraggablePanel
-            title="카테고리 분석"
-            initialPosition={{ top: 90, right: 16 }}
-            width="360px"
-            className="max-h-96"
-          >
-            <CategoryChart
-              companies={companies}
-              selectedCountry={mapState.selectedCountry}
-              loading={loading}
-            />
-          </DraggablePanel>
-
-          {/* Floating Panel: Company Info (Right-Bottom) */}
-          <DraggablePanel
-            title="기업 정보"
-            initialPosition={{ bottom: 70, right: 16 }}
-            width="384px"
-            className="max-h-[calc(100vh-180px)]"
-          >
-            <div className="overflow-y-auto max-h-[300px]">
-              <CompanyProfile company={selectedCompany} />
+          {/* 회사 정보 영역 */}
+          <div className="mb-4">
+            {/* 로고 (이니셜) */}
+            <div className="w-10 h-10 bg-stone-100 rounded-lg flex items-center justify-center text-lg font-bold text-stone-600 mb-3 group-hover:bg-emerald-50 group-hover:text-emerald-600 transition-colors">
+              {company.name.charAt(0)}
             </div>
-            <div className="border-t border-white/10 mt-2 pt-2">
-              <BrandPortfolio
-                company={selectedCompany}
-                selectedBrandId={selectedBrandId}
-                onBrandClick={(brandId) => {
-                  setSelectedBrandId(selectedBrandId === brandId ? null : brandId)
-                }}
-              />
-            </div>
-          </DraggablePanel>
+            {/* 회사명 */}
+            <h3 className="font-bold text-stone-800 text-lg truncate pr-16">{company.name}</h3>
+            {/* 카테고리 및 지역 */}
+            <p className="text-stone-500 text-xs font-medium uppercase tracking-wide mt-1">
+              {company.category} • {company.region}
+            </p>
+          </div>
 
-          {/* Live News Ticker (Fixed Bottom) */}
-          <NewsFeed />
-        </>
-      )}
+          {/* 하단 통계 및 화살표 */}
+          <div className="flex items-end justify-between border-t border-stone-100 pt-3 mt-3">
+            <div>
+              <p className="text-[10px] text-stone-400 font-semibold uppercase">Total Stores</p>
+              <p className="font-bold text-stone-800 font-mono text-lg">
+                {company.metrics?.store_count?.toLocaleString() || '-'}
+              </p>
+            </div>
+            {/* 화살표 아이콘 */}
+            <div className="w-8 h-8 rounded-full bg-stone-50 flex items-center justify-center text-stone-400 group-hover:bg-emerald-600 group-hover:text-white transition-all transform group-hover:translate-x-1">
+              <ArrowRightIcon className="w-4 h-4" />
+            </div>
+          </div>
+        </div>
+      ))}
     </div>
-  )
+  );
 }
