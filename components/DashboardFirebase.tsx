@@ -30,9 +30,8 @@ export default function DashboardFirebase() {
   const [isDetailDrawerOpen, setIsDetailDrawerOpen] = useState(false)
   const [selectedRegion, setSelectedRegion] = useState<string>('Southeast Asia')
 
-  // Fetch companies from Firebase with filters
-  // Set realtime to true for live updates, false for one-time fetch
-  const { companies, loading, error } = useCompanies(filters, false)
+  // Fetch companies from Firebase with realtime updates
+  const { companies, loading, error } = useCompanies()
 
   const handleCompanySelect = (companyId: string) => {
     const company = companies.find(c => c.id === companyId)
@@ -95,7 +94,7 @@ export default function DashboardFirebase() {
 
       {error && (
         <div className="absolute top-20 left-1/2 -translate-x-1/2 z-50 bg-red-500/10 border border-red-500 rounded-lg p-4 max-w-md">
-          <p className="text-red-400">Error loading data: {error.message}</p>
+          <p className="text-red-400">Error loading data: {error}</p>
           <p className="text-sm text-gray-400 mt-2">
             Make sure Firebase is configured in your .env.local file
           </p>
@@ -137,8 +136,6 @@ export default function DashboardFirebase() {
           >
             <CategoryChart
               companies={companies}
-              selectedCountry={mapState.selectedCountry}
-              loading={loading}
             />
           </DraggablePanel>
 

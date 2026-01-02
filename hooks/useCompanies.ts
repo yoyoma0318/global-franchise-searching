@@ -1,23 +1,7 @@
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, query, orderBy, onSnapshot, FirestoreError } from 'firebase/firestore';
-
-export interface Company {
-  id: string;
-  name: string;
-  category: string;
-  region: string;
-  country?: string;
-  description?: string;
-  status?: string;
-  metrics?: {
-    revenue?: string;
-    store_count?: number;
-  };
-  brands?: { name: string; category: string }[];
-  // 필요한 필드들을 유연하게 정의
-  [key: string]: any; 
-}
+import { Company } from '@/types';
 
 export function useCompanies() {
   const [companies, setCompanies] = useState<Company[]>([]);

@@ -154,26 +154,26 @@ export default function CompanyDetailDrawer({ company, isOpen, onClose }: Compan
           </div>
 
           {/* Contact Info */}
-          {(company.email || company.phone) && (
+          {(company.contactInfo?.email || company.contactInfo?.phone) && (
             <div className="mt-6 pt-6 border-t border-stone-200">
               <h3 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
                 <Users className="w-4 h-4 text-slate-600" />
                 Contact
               </h3>
               <div className="space-y-2 text-sm text-slate-700">
-                {company.email && (
+                {company.contactInfo?.email && (
                   <p className="flex items-center gap-2">
                     <span className="text-slate-600">Email:</span>
-                    <a href={`mailto:${company.email}`} className="text-emerald-600 hover:underline">
-                      {company.email}
+                    <a href={`mailto:${company.contactInfo.email}`} className="text-emerald-600 hover:underline">
+                      {company.contactInfo.email}
                     </a>
                   </p>
                 )}
-                {company.phone && (
+                {company.contactInfo?.phone && (
                   <p className="flex items-center gap-2">
                     <span className="text-slate-600">Phone:</span>
-                    <a href={`tel:${company.phone}`} className="text-emerald-600 hover:underline">
-                      {company.phone}
+                    <a href={`tel:${company.contactInfo.phone}`} className="text-emerald-600 hover:underline">
+                      {company.contactInfo.phone}
                     </a>
                   </p>
                 )}
